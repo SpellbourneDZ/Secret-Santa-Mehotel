@@ -167,47 +167,49 @@ async def on_know_target(callback: CallbackQuery):
 async def cmd_players(message: Message):
     """
     Список всех игроков и их статусов (для админа).
+    Без Markdown, чтобы ничего не падало из-за форматирования.
     """
     if not is_admin(message.from_user.id):
         return
 
     players = db.get_all_players()
     if not players:
-        await message.answer(ADMIN_MESSAGES["no_players"])
+        await message.answer("Игроков пока нет.")
         return
 
-    lines = [ADMIN_MESSAGES["players_header"]]
+    lines = []
+    lines.append("Список игроков:\n")
 
     for p in players:
         statuses = []
 
         if p.get("full_name"):
-            statuses.append("👤 имя ок")
+            statuses.append("имя ок")
         else:
-            statuses.append("❌ нет имени")
+            statuses.append("нет имени")
 
         if p.get("wish"):
-            statuses.append("🎁 пожелания ок")
+            statuses.append("пожелания ок")
         else:
-            statuses.append("❌ нет пожеланий")
+            statuses.append("нет пожеланий")
 
         if p.get("target_id"):
-            statuses.append(f"🎄 дарит id={p['target_id']}")
+            statuses.append(f"дарит id={p['target_id']}")
         else:
-            statuses.append("⏳ пара не назначена")
+            statuses.append("пара не назначена")
 
         block = (
             f"id={p['id']} | tg_id={p['tg_id']} | "
             f"@{p['tg_username'] if p.get('tg_username') else '-'}\n"
             f"Имя: {p.get('full_name') or '— не указано'}\n"
-            + " / ".join(statuses)
-            + "\n"
+            f"Статус: " + " / ".join(statuses) + "\n"
         )
         lines.append(block)
 
     text = "\n".join(lines)
-    await message.answer(text)
 
+    # Отправляем БЕЗ parse_mode, чтобы Telegram не пытался парсить Markdown
+    await message.answer(text, parse_mode=None)
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
@@ -437,3 +439,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
