@@ -211,8 +211,12 @@ async def cmd_players(message: Message):
     # Отправляем БЕЗ parse_mode, чтобы Telegram не пытался парсить Markdown
     await message.answer(text, parse_mode=None)
 
+
 @router.message(Command("help_admin"))
 async def cmd_help_admin(message: Message):
+    """
+    Показать список всех админских команд.
+    """
     if not is_admin(message.from_user.id):
         return
 
@@ -228,6 +232,7 @@ async def cmd_help_admin(message: Message):
     )
 
     await message.answer(text)
+
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
@@ -284,7 +289,7 @@ async def cmd_close_reg(message: Message):
 
     # рассылаем уведомление всем участникам с пожеланиями:
     # 1) "жеребьёвка завершена"
-    # 2) "Пришло время узнать..." + кнопка "Узнать"
+    # 2) "Пришло время узнать." + кнопка "Узнать"
     players_ready = db.get_all_players_ready()
     for p in players_ready:
         try:
@@ -457,4 +462,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
