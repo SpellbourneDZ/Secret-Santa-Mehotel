@@ -211,6 +211,24 @@ async def cmd_players(message: Message):
     # Отправляем БЕЗ parse_mode, чтобы Telegram не пытался парсить Markdown
     await message.answer(text, parse_mode=None)
 
+@router.message(Command("help_admin"))
+async def cmd_help_admin(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+
+    text = (
+        "*Команды администратора:*\n\n"
+        "/players — список игроков и их статусы\n"
+        "/status — состояние игры\n"
+        "/close_reg — провести боевую жеребьёвку (закрыть регистрацию)\n"
+        "/test_draw — тестовая жеребьёвка\n"
+        "/reset_game — мягкий сброс (очистка пожеланий/имён/пар)\n"
+        "/reset_all — полный сброс игры (удаление всех игроков)\n"
+        "/help_admin — показать список команд\n"
+    )
+
+    await message.answer(text)
+
 @router.message(Command("status"))
 async def cmd_status(message: Message):
     """
@@ -439,4 +457,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
