@@ -218,7 +218,8 @@ async def cmd_players(message: Message):
             statuses.append("нет пожеланий")
 
         if p.get("target_id"):
-            statuses.append(f"дарит id={p['target_id']}")
+            # Пара назначена, но не показываем кому
+            statuses.append("пара назначена")
         else:
             statuses.append("пара не назначена")
 
@@ -238,20 +239,18 @@ async def cmd_players(message: Message):
 
 @router.message(Command("help_admin"))
 async def cmd_help_admin(message: Message):
-    """
-    Показать список всех админских команд.
-    """
     if not is_admin(message.from_user.id):
         return
 
     text = (
-        "*Команды администратора:*\n\n"
+        "Команды администратора:\n\n"
         "/players — список игроков и их статусы\n"
         "/status — состояние игры\n"
-        "/close_reg — провести боевую жеребьёвку (закрыть регистрацию)\n"
+        "/close_reg — боевая жеребьёвка\n"
         "/test_draw — тестовая жеребьёвка\n"
-        "/reset_game — мягкий сброс (очистка пожеланий/имён/пар)\n"
-        "/reset_all — полный сброс игры (удаление всех игроков)\n"
+        "/pairs — показать, кто кому дарит (кроме самого админа)\n"
+        "/reset_game — мягкий сброс\n"
+        "/reset_all — полный сброс\n"
         "/help_admin — показать список команд\n"
     )
 
@@ -278,6 +277,66 @@ async def fallback_message(message: Message):
         parse_mode=None
     )
 
+@router.message(Command("pairs"))
+async def cmd_pairs(message: Message):
+    """
+    Показать всем парам Тайных Сант (для админа),
+    но не раскрывать, кому дарит сам админ.
+    """
+    if not is_admin(message.from_user.id):
+        return
+
+    admin_tg_id = message.from_user.id
+
+    # Берём только игроков, которые "готовы" (есть имя и пожелания)
+    players_ready = db.get_all_players_ready()
+    if not players_ready:
+        await message.answer("Пока нет игроков с заполненными данными.", parse_mode=None)
+        return
+
+    lines = ["Список пар Тайных Сант:\n"]
+    admin_has_pair = False
+
+    for santa in players_ready:
+        target_id = santa.get("target_id")
+        if not target_id:
+            # Для этого игрока пара ещё не назначена
+            continue
+
+        # Если это сам админ как игрок — не показываем, кому он дарит
+        if santa["tg_id"] == admin_tg_id:
+            admin_has_pair = True
+            continue
+
+        receiver = db.get_player_by_id(target_id)
+        if not receiver:
+            continue
+
+        santa_name = santa.get("full_name") or "Без имени"
+        santa_username = santa.get("tg_username") or "-"
+
+        receiver_name = receiver.get("full_name") or "Без имени"
+        receiver_wish = receiver.get("wish") or "Без пожеланий"
+
+        line = (
+            f"{santa_name} (@{santa_username}) → {receiver_name}\n"
+            f"Пожелания получателя: {receiver_wish}\n"
+        )
+        lines.append(line)
+
+    if len(lines) == 1:
+        # Никому ещё не назначили пары или данные не заполнены
+        await message.answer("Пары ещё не распределены или нет готовых игроков.", parse_mode=None)
+        return
+
+    # Если админ тоже участвует как игрок — мягко скажем, что его пары тут нет
+    if admin_has_pair:
+        lines.append(
+            "\nТы тоже участвуешь как игрок 🎅\n"
+            "Твоя собственная пара скрыта, чтобы сохранить сюрприз 🙂"
+        )
+
+    await message.answer("\n".join(lines), parse_mode=None)
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
@@ -507,6 +566,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
