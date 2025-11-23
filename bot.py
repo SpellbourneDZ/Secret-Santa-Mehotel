@@ -233,6 +233,27 @@ async def cmd_help_admin(message: Message):
 
     await message.answer(text, parse_mode=None)
 
+@router.message()
+async def fallback_message(message: Message):
+    """
+    Ответ на любые сообщения/команды, которые не попали ни в один хендлер.
+    """
+    # Если это админ — подсказываем про /help_admin
+    if is_admin(message.from_user.id):
+        await message.answer(
+            "Я не понимаю эту команду.\n"
+            "Используй /help_admin, чтобы посмотреть доступные команды администратора.",
+            parse_mode=None
+        )
+        return
+
+    # Обычный игрок
+    await message.answer(
+        "Я пока понимаю только команды, связанные с игрой Тайный Санта 🎅\n\n"
+        "Нажми /start, чтобы начать или продолжить участие в игре.",
+        parse_mode=None
+    )
+
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
@@ -462,4 +483,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
