@@ -88,34 +88,58 @@ async def cmd_start(message: Message, state: FSMContext):
 async def process_full_name(message: Message, state: FSMContext):
     """
     Обработка имени и фамилии.
+    Разрешаем только обычный текст, без команд.
     """
-    full_name = (message.text or "").strip()
-    if not full_name:
-        await message.answer(PLAYER_MESSAGES["ask_full_name_invalid"])
+    # Если нет текста (стикер, фото, голос и т.п.)
+    if not message.text:
+        await message.answer(
+            "Пожалуйста, напиши *имя и фамилию* обычным текстом, без стикеров и картинок 🙂"
+        )
         return
 
+    text = message.text.strip()
+
+    # Если человек пытается ввести команду вместо имени
+    if text.startswith("/"):
+        await message.answer(
+            "Сейчас мне нужно только твоё *имя и фамилия*.\n"
+            "Пожалуйста, напиши их обычным текстом, без команд 🙂"
+        )
+        return
+
+    # Нормальный текст — сохраняем как имя
+    full_name = text
     db.update_full_name(message.from_user.id, full_name)
+
     await message.answer(PLAYER_MESSAGES["ask_wish"])
     await state.set_state(Registration.waiting_wish)
-
 
 @router.message(Registration.waiting_wish)
 async def process_wish(message: Message, state: FSMContext):
     """
     Обработка пожеланий.
+    Разрешаем только обычный текст, без команд.
     """
-    wish = (message.text or "").strip()
-    if not wish:
-        await message.answer(PLAYER_MESSAGES["ask_wish_invalid"])
+    if not message.text:
+        await message.answer(
+            "Пожалуйста, напиши, *что хочешь получить, а что точно нет* — обычным текстом 🙂"
+        )
         return
 
+    text = message.text.strip()
+
+    if text.startswith("/"):
+        await message.answer(
+            "Сейчас мне нужно только твоё пожелание к подарку 🎁\n"
+            "Напиши, что хочешь получить, а что не хочешь — обычным текстом, без команд 🙂"
+        )
+        return
+
+    wish = text
     db.update_wish(message.from_user.id, wish)
     await state.clear()
 
-    # Только подтверждаем сохранение данных.
-    # Сообщение "Пришло время узнать..." придёт уже после жеребьёвки.
     await message.answer(PLAYER_MESSAGES["registration_done_info"])
-
 
 @router.callback_query(F.data == "know_target")
 async def on_know_target(callback: CallbackQuery):
@@ -483,5 +507,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
