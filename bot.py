@@ -231,7 +231,7 @@ async def cmd_help_admin(message: Message):
         "/help_admin — показать список команд\n"
     )
 
-    await message.answer(text)
+    await message.answer(text, parse_mode=None)
 
 
 @router.message(Command("status"))
@@ -462,3 +462,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
