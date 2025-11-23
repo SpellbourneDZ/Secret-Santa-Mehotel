@@ -30,7 +30,7 @@ if not BOT_TOKEN:
         "BOT_TOKEN is not set. Please configure it via config.py or environment variable."
     )
 
-bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
+bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
