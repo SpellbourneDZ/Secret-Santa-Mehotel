@@ -240,12 +240,13 @@ async def cmd_help_admin(message: Message):
 
 @router.message(Command("pairs"))
 async def cmd_pairs(message: Message):
-    """Display all assigned pairs except the admin's own target."""
+    """Показать все пары, кроме пары самого админа (если он участвует)."""
 
     if not is_admin(message.from_user.id):
         return
 
     admin_tg_id = message.from_user.id
+
     players_ready = db.get_all_players_ready()
     if not players_ready:
         await _answer_text(
@@ -255,16 +256,14 @@ async def cmd_pairs(message: Message):
         )
         return
 
-    lines = ["Список пар Тайных Сант:\n"]
-    admin_has_pair = False
-
+    lines: list[str] = []
     for santa in players_ready:
         target_id = santa.get("target_id")
         if not target_id:
             continue
 
-        if santa["tg_id"] == admin_tg_id:
-            admin_has_pair = True
+        # Не показываем пару самого админа, если он тоже игрок
+        if santa.get("tg_id") == admin_tg_id:
             continue
 
         receiver = db.get_player_by_id(target_id)
@@ -272,16 +271,12 @@ async def cmd_pairs(message: Message):
             continue
 
         santa_name = santa.get("full_name") or "Без имени"
-        santa_username = santa.get("tg_username") or "-"
         receiver_name = receiver.get("full_name") or "Без имени"
-        receiver_wish = receiver.get("wish") or "Без пожеланий"
 
-        lines.append(
-            f"{santa_name} (@{santa_username}) → {receiver_name}\n"
-            f"Пожелания получателя: {receiver_wish}\n"
-        )
+        # Только "кто → кому", без юзернеймов и пожеланий
+        lines.append(f"{santa_name} → {receiver_name}")
 
-    if len(lines) == 1:
+    if not lines:
         await _answer_text(
             message,
             "Пары ещё не распределены или нет готовых игроков.",
@@ -289,14 +284,34 @@ async def cmd_pairs(message: Message):
         )
         return
 
-    if admin_has_pair:
-        lines.append(
-            "\nТы тоже участвуешь как игрок 🎅\n"
-            "Твоя собственная пара скрыта, чтобы сохранить сюрприз 🙂",
+    # Добавляем краткий заголовок
+    all_lines = ["Список пар Тайных Сант:", ""] + lines
+
+    # Режем по длине, чтобы не ловить "message is too long"
+    MAX_LEN = 4000
+    current_block: list[str] = []
+    current_len = 0
+
+    for line in all_lines:
+        line_len = len(line) + 1  # + перевод строки
+        if current_len + line_len > MAX_LEN and current_block:
+            await _answer_text(
+                message,
+                "\n".join(current_block),
+                parse_mode=None,
+            )
+            current_block = [line]
+            current_len = line_len
+        else:
+            current_block.append(line)
+            current_len += line_len
+
+    if current_block:
+        await _answer_text(
+            message,
+            "\n".join(current_block),
+            parse_mode=None,
         )
-
-    await _answer_text(message, "\n".join(lines), parse_mode=None)
-
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
